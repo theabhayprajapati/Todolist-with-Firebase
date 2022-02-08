@@ -1,82 +1,112 @@
+import { addDoc, collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
+import { fstatSync } from 'fs'
+import ReactLoading from 'react-loading';
 import Head from 'next/head'
-
+import { useEffect, useState } from 'react';
+import { db } from '../Firebase'
+import { TrashIcon, PencilAltIcon } from "@Heroicons/react/outline";
 export default function Home() {
+  const [todo, settodo] = useState<any>();
+  const [loadingtype, setloadingtype] = useState('Blank');
+  const [loadingColor, setloadingColor] = useState('blue')
+  const [addloading, setaddloading] = useState("Blank")
+  const [todos, settodos] = useState([]);
+  let colRef = collection(db, 'todos')
+  useEffect(() => {
+
+    let getTodos = async () => {
+      let todos = onSnapshot(colRef, (snapshot) => { settodos(snapshot.docs) })
+    }
+    getTodos()
+
+  }, []);
+
+  console.log("Todos are", todos)
+
+  // adding todos to the firebase
+  const addTodo = async () => {
+    setloadingtype("balls");
+    let todoVal = todo;
+    setaddloading(addloading + 40)
+
+    await addDoc((colRef), { task: todoVal, createdAt: serverTimestamp() })
+
+    console.log("your tod is", todoVal)
+    settodo('')
+    setloadingtype("blank")
+
+  }
+
+
+  // deleting todos from the firebase
+  const deleteTodo = async (id: string) => {
+    setloadingColor('red')
+    await deleteDoc(doc(colRef, id))
+  }
+  console.log(todo)
+
+  // updating todos in the firebase
+  const updateTodo = async (id: string, task: string) => {
+    await updateDoc(doc(colRef, id), { task: 'task' })
+  }
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center py-2">
+    <div>
       <Head>
-        <title>Create Next App</title>
+        <title>Firebase Todo</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
-        <h1 className="text-6xl font-bold">
-          Welcome to{' '}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Next.js!
-          </a>
+      <main className='font-Syne p-5 '>
+        {/* Navbar for todolist */}
+        <nav>
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold">Todo List</h1>
+            <div className="flex">
+              {/* making github type button with green backgroud color*/}
+              <button className="bg-green-500 hover:#6cc644 text-white font-bold py-2 px-4 rounded-md">
+                Github
+              </button>
+            </div>
+          </div>
+        </nav>
+        {/* TODO HEADING */}
+        <h1 className='text-2xl font-bold'>
+          Add to the list
         </h1>
+        {/* Loading Bar */}
+        <ReactLoading type={loadingtype} color={loadingColor} height={'10%'} width={'10%'} />
+        {/* TODO INPUT */}
+        <div className='flex gap-4 items-center mb-5 min-w-full justify-between'>
 
-        <p className="mt-3 text-2xl">
-          Get started by editing{' '}
-          <code className="rounded-md bg-gray-100 p-3 font-mono text-lg">
-            pages/index.tsx
-          </code>
-        </p>
+          <input value={todo} onChange={(e: React.ChangeEvent<HTMLInputElement>) => settodo(e.target.value)} type="text" className=" bg-yellow-50 text-yellow-900 font-semibold rounded-md p-2 w-[70%]  border-yellow-900 text hover:h-32 hover:mt-0 " />
+          <button onClick={addTodo} className="bg-blue-500 active:bg-blue-400 rounded-md p-2 w-[30%] shadow-lg">
+            Add
+          </button>
+        </div>
 
-        <div className="mt-6 flex max-w-4xl flex-wrap items-center justify-around sm:w-full">
-          <a
-            href="https://nextjs.org/docs"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Documentation &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Find in-depth information about Next.js features and API.
-            </p>
-          </a>
+        {/* TODO LIST */}
+        {/* showing todos to the users' */}
+        <div className=''>
+          {todos.length > 0 &&
+            todos.map((todo: any) => {
+              return (
+                <div key={todo.id} className='flex items-center mb-3 '>
+                  <div className='flex  items-center justify-between gap-3 bg-yellow-100 text-yellow-900 shadow-md rounded-md px-1 min-w-full '>
 
-          <a
-            href="https://nextjs.org/learn"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Learn &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Learn about Next.js in an interactive course with quizzes!
-            </p>
-          </a>
+                    <p className='text-2xl '>
+                      {todo.data().task}
+                    </p>
 
-          <a
-            href="https://github.com/vercel/next.js/tree/canary/examples"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Examples &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Discover and deploy boilerplate example Next.js projects.
-            </p>
-          </a>
-
-          <a
-            href="https://vercel.com/import?filter=next.js&utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Deploy &rarr;</h3>
-            <p className="mt-4 text-xl">
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
+                    <h1 className='flex w-[20%]  gap-3'>
+                      <PencilAltIcon className='text-blue-500   h-8' onClick={() => { updateTodo(todo.id, todo.data().task) }} />
+                      <TrashIcon onClick={() => { deleteTodo(todo.id); }} className='h-8 text-red-500' />
+                    </h1>
+                  </div>
+                </div>)
+            })
+          }
         </div>
       </main>
-
-      <footer className="flex h-24 w-full items-center justify-center border-t">
-        <a
-          className="flex items-center justify-center"
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className="ml-2 h-4" />
-        </a>
-      </footer>
     </div>
   )
 }
